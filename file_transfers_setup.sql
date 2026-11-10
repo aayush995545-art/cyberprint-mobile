@@ -35,6 +35,11 @@ create policy "Customers upload incoming files" on storage.objects
 for insert to anon, authenticated
 with check (bucket_id='file-transfers' and name like 'customer-inbox/%');
 
+drop policy if exists "Admins read transfer files" on storage.objects;
+create policy "Admins read transfer files" on storage.objects
+for select to authenticated
+using (bucket_id='file-transfers' and exists(select 1 from public.admin_users a where a.user_id=auth.uid()));
+
 drop policy if exists "Admins upload outgoing files" on storage.objects;
 create policy "Admins upload outgoing files" on storage.objects
 for insert to authenticated
