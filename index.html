@@ -22,8 +22,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:11px}
 <main>
 <nav class="tabs">
 <button class="tab active" id="t-print" onclick="show('print')">🖨️ Print</button>
-<button class="tab" id="t-send" onclick="show('send')">📤 Mobile में भेजें</button>
-<button class="tab" id="t-get" onclick="show('get')">📥 Mobile से लें</button>
+<button class="tab" id="t-send" onclick="show('send')">📤 दुकानदार को फाइल भेजें</button>
+<button class="tab" id="t-get" onclick="show('get')">📥 दुकानदार से फाइल प्राप्त करें</button>
 </nav>
 
 <section id="print">
@@ -37,23 +37,32 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:11px}
 </div>
 <div class="card"><h2>दुकानदार का Admin Panel</h2>
 <div id="loginBox"><label>Admin Email</label><input id="email" type="email"><label>Password</label><input id="password" type="password"><button style="width:100%" onclick="login()">Admin Login</button><p id="loginStatus" class="status"></p></div>
-<div id="adminBox" class="hidden"><div class="row"><h3 style="flex:1">Live Requests</h3><button class="secondary" onclick="refreshJobs()">Refresh</button><button class="secondary" onclick="logout()">Logout</button></div><div id="jobList" class="muted small">Loading…</div></div>
+<div id="adminBox" class="hidden"><div class="row"><h3 style="flex:1">Live Requests</h3><button class="secondary" onclick="refreshJobs()">Refresh</button><button class="secondary" onclick="logout()">Logout</button></div><div id="jobList" class="muted small">Loading…</div>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>📥 ग्राहकों से आई फाइलें</h3><div id="transferList" class="muted small">Loading…</div>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>📤 ग्राहक को फाइल भेजें</h3>
+<label>फाइल चुनें</label><input id="outFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp">
+<label>ग्राहक का नाम (वैकल्पिक)</label><input id="outName" maxlength="60" placeholder="नाम">
+<button style="width:100%;margin-top:10px" onclick="uploadOutgoing()">फाइल अपलोड करके कोड बनाएं</button>
+<p id="outStatus" class="status"></p><div id="outResult" class="hidden"></div></div>
 </div>
 </section>
 
 <section id="send" class="hidden">
-<div class="card"><h2>अपने मोबाइल से ग्राहक को फाइल भेजें</h2>
-<p class="muted small">फाइल चुनें। अपलोड के बाद ग्राहक को देने के लिए एक सुरक्षित डाउनलोड लिंक बनेगा।</p>
-<label>PDF या फोटो चुनें</label><input id="outFile" type="file" accept="application/pdf,image/*">
-<label>ग्राहक का नाम (वैकल्पिक)</label><input id="outName" maxlength="60" placeholder="नाम">
-<button style="width:100%;margin-top:12px" onclick="uploadOutgoing()">फाइल अपलोड करें</button><p id="outStatus" class="status"></p><div id="outResult" class="hidden"></div>
+<div class="card"><h2>दुकानदार को फाइल भेजें</h2>
+<p class="muted small">PDF या फोटो सीधे दुकान पर भेजें। यह Print Request नहीं बनेगी।</p>
+<label>PDF या फोटो चुनें</label><input id="inFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp">
+<label>आपका नाम (वैकल्पिक)</label><input id="inName" maxlength="60" placeholder="नाम">
+<label>मोबाइल नंबर (वैकल्पिक)</label><input id="inPhone" inputmode="numeric" maxlength="15" placeholder="मोबाइल नंबर">
+<button style="width:100%;margin-top:12px" onclick="uploadToShop()">दुकानदार को फाइल भेजें</button><p id="inStatus" class="status"></p>
 </div></section>
 
 <section id="get" class="hidden">
-<div class="card"><h2>दुकान से फाइल प्राप्त करें</h2>
-<p class="muted small">दुकानदार से मिला सुरक्षित डाउनलोड लिंक यहाँ खोलें। अगर आपको कोड दिया गया है, तो वह अगली सुविधा में जोड़ा जाएगा।</p>
-<label>Download Link</label><input id="downloadUrl" placeholder="यहाँ लिंक पेस्ट करें">
-<button style="width:100%" onclick="openDownload()">फाइल डाउनलोड करें</button><p class="status" id="getStatus"></p>
+<div class="card"><h2>दुकानदार से फाइल प्राप्त करें</h2>
+<p class="muted small">दुकानदार से मिला Download Code दर्ज करें।</p>
+<label>Download Code</label><input id="downloadCode" maxlength="8" autocapitalize="characters" placeholder="8 अंकों/अक्षरों का कोड">
+<button style="width:100%" onclick="downloadByCode()">फाइल प्राप्त करें</button><p class="status" id="getStatus"></p>
 </div></section>
 <div class="card"><p class="notice">यह Mobile Edition का ऑनलाइन कनेक्शन वाला starter है। Live उपयोग के लिए Supabase project, config और HTTPS hosting सेट करना जरूरी है। Approve करने से अभी सीधे प्रिंटर नहीं चलेगा; Android print dialog/Print Service का अलग परीक्षण और जोड़ना बाकी है।</p></div>
 </main><footer>CyberPrint Mobile Edition · Cash at counter · No online payment</footer>
@@ -70,8 +79,11 @@ async function refreshJobs(){if(!db)return;let {data,error}=await db.from('print
 async function preview(path,print=false){let {data,error}=await db.storage.from('print-files').createSignedUrl(path,90);if(error){alert(error.message);return}let w=window.open(data.signedUrl,'_blank');if(print&&w)alert('फाइल खुलने पर Android Share/Print या browser menu से Print चुनें।')}
 async function setStatus(id,status){let {error}=await db.from('print_jobs').update({status}).eq('id',id);if(error)alert(error.message);else refreshJobs()}
 async function logout(){if(live)db.removeChannel(live);await db.auth.signOut();document.getElementById('adminBox').classList.add('hidden');document.getElementById('loginBox').classList.remove('hidden')}
-async function uploadOutgoing(){let f=document.getElementById('outFile').files[0];if(!db){say('outStatus','पहले Supabase configuration और hosting setup करना बाकी है।');return}if(!validFile(f)){say('outStatus','PDF/JPG/PNG/WEBP चुनें (अधिकतम 15 MB)।');return}let {data:{session}}=await db.auth.getSession();if(!session){say('outStatus','पहले Print टैब में Admin Login करें।');return}say('outStatus','अपलोड हो रहा है…');let path=`outgoing/${crypto.randomUUID()}.${f.name.split('.').pop().toLowerCase()}`;let {error}=await db.storage.from('print-files').upload(path,f,{contentType:f.type});if(error){say('outStatus',error.message);return}let res=await db.storage.from('print-files').createSignedUrl(path,3600);if(res.error){say('outStatus',res.error.message);return}let box=document.getElementById('outResult');box.classList.remove('hidden');box.innerHTML='<h3>ग्राहक को यह लिंक भेजें</h3>';let a=document.createElement('a');a.className='link';a.href=res.data.signedUrl;a.textContent='Secure download link (1 hour)';a.target='_blank';box.append(a);say('outStatus','फाइल अपलोड हो गई। लिंक 1 घंटे तक काम करेगा।')}
-function openDownload(){let u=document.getElementById('downloadUrl').value.trim();try{let x=new URL(u);if(x.protocol!=='https:')throw 0;location.href=x.href}catch(e){say('getStatus','कृपया सही HTTPS download link डालें।')}}
+async function uploadOutgoing(){let f=document.getElementById('outFile').files[0];if(!db){say('outStatus','Supabase config उपलब्ध नहीं है।');return}if(!validFile(f)){say('outStatus','PDF/JPG/PNG/WEBP चुनें (अधिकतम 15 MB)।');return}let {data:{session}}=await db.auth.getSession();if(!session){say('outStatus','पहले Admin Login करें।');return}say('outStatus','अपलोड हो रहा है…');let path='shop-outgoing/'+crypto.randomUUID()+'.'+f.name.split('.').pop().toLowerCase();let up=await db.storage.from('file-transfers').upload(path,f,{contentType:f.type});if(up.error){say('outStatus',up.error.message);return}let code=Array.from(crypto.getRandomValues(new Uint8Array(5)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');let ins=await db.from('file_transfers').insert({direction:'outgoing',customer_name:document.getElementById('outName').value.trim()||null,file_path:path,file_name:f.name,mime_type:f.type,file_size:f.size,download_code:code,expires_at:new Date(Date.now()+24*60*60*1000).toISOString()});if(ins.error){say('outStatus','फाइल अपलोड हुई, लेकिन कोड सेव नहीं हुआ: '+ins.error.message);return}let box=document.getElementById('outResult');box.classList.remove('hidden');box.innerHTML='<h3>ग्राहक को यह कोड दें (24 घंटे मान्य)</h3><div class="code">'+code+'</div>';say('outStatus','फाइल अपलोड हो गई।')}
+async function uploadToShop(){let f=document.getElementById('inFile').files[0];if(!db){say('inStatus','सेवा अभी configure नहीं है।');return}if(!validFile(f)){say('inStatus','PDF/JPG/PNG/WEBP चुनें (अधिकतम 15 MB)।');return}say('inStatus','फाइल भेजी जा रही है…');let path='customer-inbox/'+crypto.randomUUID()+'.'+f.name.split('.').pop().toLowerCase();let up=await db.storage.from('file-transfers').upload(path,f,{contentType:f.type});if(up.error){say('inStatus',up.error.message);return}let ins=await db.from('file_transfers').insert({direction:'incoming',customer_name:document.getElementById('inName').value.trim()||null,customer_phone:document.getElementById('inPhone').value.trim()||null,file_path:path,file_name:f.name,mime_type:f.type,file_size:f.size});if(ins.error){say('inStatus','फाइल upload हुई, लेकिन request save नहीं हुई: '+ins.error.message);return}say('inStatus','फाइल सफलतापूर्वक दुकानदार को भेज दी गई।')}
+async function refreshTransfers(){if(!db)return;let box=document.getElementById('transferList');if(!box)return;let {data,error}=await db.from('file_transfers').select('*').eq('direction','incoming').order('created_at',{ascending:false}).limit(50);if(error){box.textContent=error.message;return}box.innerHTML='';if(!data.length){box.textContent='अभी कोई नई फाइल नहीं आई है।';return}for(const t of data){let el=document.createElement('div');el.className='job';let b=document.createElement('b');b.textContent=t.file_name;let p=document.createElement('p');p.className='muted small';p.textContent=(t.customer_name||'नाम नहीं दिया')+' · '+(t.customer_phone||'मोबाइल नहीं दिया');let a=document.createElement('button');a.className='secondary';a.textContent='फाइल खोलें';a.onclick=async()=>{let u=await db.storage.from('file-transfers').createSignedUrl(t.file_path,300);if(u.error)alert(u.error.message);else window.open(u.data.signedUrl,'_blank')};el.append(b,p,a);box.append(el)}}
+async function downloadByCode(){let code=document.getElementById('downloadCode').value.trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{8}$/.test(code)){say('getStatus','कृपया 8 अक्षरों का सही Download Code डालें।');return}say('getStatus','कोड जाँचा जा रहा है…');let r=await db.rpc('lookup_file_by_code',{p_code:code});if(r.error||!r.data||!r.data.length){say('getStatus','कोड गलत है या उसकी वैधता समाप्त हो गई है।');return}let file=r.data[0];let url=db.storage.from('file-transfers').getPublicUrl(file.file_path).data.publicUrl;let a=document.createElement('a');a.href=url;a.download=file.file_name||'';a.target='_blank';document.body.append(a);a.click();a.remove();say('getStatus','फाइल डाउनलोड शुरू हो गई है।')}
+function openDownload(){return downloadByCode()}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 init();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script></body></html>
