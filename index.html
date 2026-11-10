@@ -35,7 +35,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:11px}
 <label>Paper Size</label><select id="printPaper"><option>A4</option><option>A5</option></select>
 <button style="width:100%;margin-top:13px" onclick="uploadPrint()">Request भेजें</button><p id="printStatus" class="status"></p>
 </div>
-<div class="card"><h2>दुकानदार का Admin Panel</h2>
+<div class="card hidden" id="adminCard"><h2>दुकानदार का Admin Panel</h2>
 <div id="loginBox"><label>Admin Email</label><input id="email" type="email"><label>Password</label><input id="password" type="password"><button style="width:100%" onclick="login()">Admin Login</button><p id="loginStatus" class="status"></p></div>
 <div id="adminBox" class="hidden"><div class="row"><h3 style="flex:1">Live Requests</h3><button class="secondary" onclick="refreshJobs()">Refresh</button><button class="secondary" onclick="logout()">Logout</button></div><div id="jobList" class="muted small">Loading…</div>
 <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
@@ -85,5 +85,5 @@ async function refreshTransfers(){if(!db)return;let box=document.getElementById(
 async function downloadByCode(){let code=document.getElementById('downloadCode').value.trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{8}$/.test(code)){say('getStatus','कृपया 8 अक्षरों का सही Download Code डालें।');return}say('getStatus','कोड जाँचा जा रहा है…');let r=await db.rpc('lookup_file_by_code',{p_code:code});if(r.error||!r.data||!r.data.length){say('getStatus','कोड गलत है या उसकी वैधता समाप्त हो गई है।');return}let file=r.data[0];let url=db.storage.from('file-transfers').getPublicUrl(file.file_path).data.publicUrl;let a=document.createElement('a');a.href=url;a.download=file.file_name||'';a.target='_blank';document.body.append(a);a.click();a.remove();say('getStatus','फाइल डाउनलोड शुरू हो गई है।')}
 function openDownload(){return downloadByCode()}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-init();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+init();if(new URLSearchParams(location.search).get('admin')==='1')document.getElementById('adminCard').classList.remove('hidden');if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script></body></html>
