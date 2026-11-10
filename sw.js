@@ -1,4 +1,4 @@
-const C="cp-mobile-v4";
+const C="cp-mobile-v5";
 self.addEventListener("install",e=>e.waitUntil((async()=>{const c=await caches.open(C);await c.addAll(["./","./index.html","./manifest.webmanifest"]);await self.skipWaiting()})()));
 self.addEventListener("activate",e=>e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)));await self.clients.claim()})()));
 self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const isPage=e.request.mode==="navigate"||new URL(e.request.url).pathname.endsWith("/index.html");if(isPage){e.respondWith((async()=>{try{const fresh=await fetch(e.request,{cache:"no-store"});const c=await caches.open(C);c.put("./index.html",fresh.clone());return fresh}catch(err){return (await caches.match("./index.html"))||Response.error()}})());return}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});
