@@ -1,8 +1,8 @@
 {
-  "id": "./index.html?admin=1",
+  "id": "./admin.html",
   "name": "CyberPrint Admin Panel",
   "short_name": "CyberPrint Admin",
-  "start_url": "./index.html?admin=1",
+  "start_url": "./admin.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f7fb",
